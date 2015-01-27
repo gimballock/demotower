@@ -1,0 +1,4 @@
+admin_password: changeme
+database: internal
+munin_password: changeme
+primary_machine: localhost

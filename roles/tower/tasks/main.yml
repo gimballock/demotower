@@ -12,31 +12,35 @@
   with_items:
   - git
   - python-pip
+  - python-devel
+  - python-crypto
+  - python-ecdsa
   - unzip
   - python-psphere
   when: ansible_os_family == "RedHat"
 
-- name: install package dependencies and other common packages for Debian-based hosts
-  apt: name={{ item }} state=latest update_cache=yes upgrade=yes cache_valid_time=600
-  with_items: 
-  - git
-  - python-pip
-  - unzip
-  - python-psphere
-  when: ansible_os_family == "Debian"
-  
 - name: install Ansible via pip
   command: pip install ansible
-  
+
 - name: download Tower setup
   get_url: url=http://releases.ansible.com/ansible-tower/setup/ansible-tower-setup-{{tower_version | default('latest')}}.tar.gz
     dest=/opt/ force=yes
 
 - name: create extract folder
-  file: dest=/opt/ansible-tower-setup mode=640 owner=root group=root state=directory
+  file: dest=/opt/ansible-tower-setup mode=755 owner=root group=root state=directory
 
 - name: extract Tower
   command: chdir=/opt/ creates=/opt/ansible-tower-setup/setup.py tar zxvf ansible-tower-setup-{{tower_version | default('latest')}}.tar.gz --strip 1 -C /opt/ansible-tower-setup
+
+- name: Fix permissons
+  command: chown -R root:root /opt/ansible-tower-setup
+
+- name: Copy over Tower defaults
+  copy: src=tower_defaults.yml dest=/opt/ansible-tower-setup/
+
+- name: Generate tower_setup_conf.yml
+  shell: chdir=/opt/ansible-tower-setup creates=/opt/ansible-tower-setup/tower_setup_conf.yml
+    ./configure -o tower_defaults.yml <<< 'y'
 
 - name: run the Tower installer
   command: chdir=/opt/ansible-tower-setup creates=/etc/awx/settings.py ./setup.sh
